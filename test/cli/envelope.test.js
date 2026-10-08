@@ -1,4 +1,4 @@
-const { test, expect } = require('bun:test');
+const { test, expect, afterAll } = require('bun:test');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -6,6 +6,7 @@ const { to_argv, fail, ok, REGIONS } = require('../../src/cli/envelope');
 
 const ROOT = path.join(__dirname, '..', '..');
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'wecli-'));
+afterAll(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 const run_cli = (args) => {
 	const res = Bun.spawnSync([process.execPath, 'src/cli.js', ...args, '--data-dir', tmp], { cwd: ROOT });
