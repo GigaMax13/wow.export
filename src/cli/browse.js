@@ -74,4 +74,51 @@ const search = ({ query = '', regex = false, type, offset, limit }) => {
 	return { entries, total, offset, limit };
 };
 
-module.exports = { search, parse_page_args, validate_type, make_predicate };
+// formats the CLI can write per type; RAW = the file's bytes as stored
+const EXPORT_FORMATS = {
+	model: ['OBJ', 'STL', 'GLTF', 'GLB', 'RAW'],
+	texture: ['PNG', 'WEBP', 'RAW'],
+	sound: ['RAW'], text: ['RAW'], font: ['RAW'], other: ['RAW']
+};
+
+const not_found = (value) => new CLIError('file-not-found', `No file ${value} in this build`);
+
+const resolve_file = (value) => {
+	const listfile = js('casc/listfile');
+	let fileDataID = listfile.getByFilename(value);
+	if (fileDataID === undefined) {
+		if (!/^\d+$/.test(value))
+			throw not_found(value);
+		fileDataID = parseInt(value, 10);
+	}
+	return { fileDataID, fileName: listfile.getByID(fileDataID) ?? listfile.formatUnknownFile(fileDataID) };
+};
+
+// desktop categorisation: the list whose entry ends in " [fdid]"
+const file_type_of = (fdid) => {
+	const view = js('core').view;
+	const suffix = ` [${fdid}]`;
+	return FILE_TYPES.find(t => (view[FILE_TYPE_LISTS[t]] ?? []).some(e => e.endsWith(suffix))) ?? 'other';
+};
+
+async function inspect(value) {
+	const { fileDataID, fileName } = resolve_file(value);
+	const { EncryptionError } = js('casc/blte-reader');
+	let data;
+	try {
+		data = await js('core').view.casc.getFile(fileDataID);
+		if (typeof data.processAllBlocks === 'function')
+			data.processAllBlocks();
+	} catch (e) {
+		if (e instanceof EncryptionError)
+			throw new CLIError('encrypted', e.message);
+		if (/does not exist in root/.test(e.message))
+			throw not_found(value);
+		throw e;
+	}
+
+	const type = file_type_of(fileDataID);
+	return { fileDataID, fileName, type, size: data.byteLength, formats: EXPORT_FORMATS[type] };
+}
+
+module.exports = { EXPORT_FORMATS, file_type_of, inspect, search, parse_page_args, validate_type, make_predicate };

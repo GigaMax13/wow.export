@@ -7,7 +7,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { parseArgs } = require('util');
-const { CLIError, ok, fail, action, entry_actions, ctx_args, build_actions, context_actions, file_actions } = require('./cli/envelope');
+const { CLIError, ok, fail, action, entry_actions, ctx_args, build_actions, context_actions, file_actions, export_actions } = require('./cli/envelope');
 const context = require('./cli/context');
 const browse = require('./cli/browse');
 const pkg = require('../package.json');
@@ -15,7 +15,8 @@ const pkg = require('../package.json');
 const DEFAULT_DATA_DIR = path.join(os.homedir(), '.wow.export-cli');
 
 const OPTIONS = { 'data-dir': { type: 'string' }, source: { type: 'string' }, build: { type: 'string' },
-	query: { type: 'string' }, regex: { type: 'boolean' }, type: { type: 'string' }, offset: { type: 'string' }, limit: { type: 'string' }
+	query: { type: 'string' }, regex: { type: 'boolean' }, type: { type: 'string' }, offset: { type: 'string' }, limit: { type: 'string' },
+	file: { type: 'string', multiple: true }
 };
 
 const COMMANDS = {
@@ -54,6 +55,17 @@ const COMMANDS = {
 
 		return ok({ query, regex, type: type ?? null, total, offset, limit, limitCapped,
 			entries: entries.map(e => ({ ...e, actions: file_actions(ctx, e) })) }, [...next, ...context_actions(ctx)]);
+	},
+
+	inspect: async (args) => {
+		if (args.file?.length !== 1)
+			throw new CLIError('usage', 'inspect takes exactly one --file <fdid|path>');
+
+		const opened = await context.require_context(args);
+		const ctx = ctx_args(opened.source, opened.build, args['data-dir']);
+		const info = await browse.inspect(args.file[0]);
+		const model = info.type === 'model' ? file_actions(ctx, info).filter(a => a.rel !== 'inspect') : [];
+		return ok(info, [...export_actions(ctx, info, info.formats), ...model]);
 	}
 };
 

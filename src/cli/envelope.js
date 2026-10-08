@@ -3,6 +3,7 @@
 	Authors: Kruithne <kruithne@gmail.com>
 	License: MIT
  */
+const os = require('os');
 const path = require('path');
 
 const CLI_PATH = path.join(__dirname, '..', 'cli.js');
@@ -75,4 +76,8 @@ const file_actions = (ctx, entry) => {
 	return actions;
 };
 
-module.exports = { CLIError, ok, fail, action, to_argv, entry_actions, ctx_args, build_actions, context_actions, file_actions, FILE_TYPES, REGIONS };
+// --out falls back to the desktop default export dir (src/app.js) until the export command lands
+const export_actions = (ctx, file, formats) => formats.map(format => action('export', `Export as ${format}.`, 'export',
+	{ ...ctx, file: String(file.fileDataID), format, out: path.join(os.homedir(), 'wow.export') }));
+
+module.exports = { export_actions, CLIError, ok, fail, action, to_argv, entry_actions, ctx_args, build_actions, context_actions, file_actions, FILE_TYPES, REGIONS };
