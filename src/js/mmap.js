@@ -3,11 +3,15 @@
 	Authors: Kruithne <kruithne@gmail.com>
 	License: MIT
  */
+const fs = require('fs');
 const path = require('path');
 const log = require('./log');
 const constants = require('./constants');
 
-const mmap_native = require(path.join(constants.INSTALL_PATH, 'mmap.node'));
+const mmap_path = path.join(constants.INSTALL_PATH, 'mmap.node');
+const mmap_native = require(fs.existsSync(mmap_path)
+	? mmap_path
+	: path.join(constants.INSTALL_PATH, 'node_addons', 'mmap', 'build', 'Release', 'mmap.node'));
 
 const virtual_files = new Set();
 
