@@ -7,12 +7,13 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { parseArgs } = require('util');
-const { CLIError, ok, fail, entry_actions } = require('./cli/envelope');
+const { CLIError, ok, fail, entry_actions, ctx_args, build_actions, context_actions } = require('./cli/envelope');
+const context = require('./cli/context');
 const pkg = require('../package.json');
 
 const DEFAULT_DATA_DIR = path.join(os.homedir(), '.wow.export-cli');
 
-const OPTIONS = { 'data-dir': { type: 'string' } };
+const OPTIONS = { 'data-dir': { type: 'string' }, source: { type: 'string' }, build: { type: 'string' } };
 
 const COMMANDS = {
 	'': async (args) => ok({
@@ -20,7 +21,19 @@ const COMMANDS = {
 		version: pkg.version,
 		description: pkg.description,
 		commands: Object.keys(COMMANDS).filter(Boolean)
-	}, entry_actions(args['data-dir']))
+	}, entry_actions(args['data-dir'])),
+
+	builds: async (args) => {
+		const builds = await context.list_builds(args.source, args['data-dir']);
+		const actions = build_actions(args.source, builds, args['data-dir']);
+		return ok({ source: args.source, builds: builds.map((b, i) => ({ ...b, action: actions[i] })) }, actions);
+	},
+
+	open: async (args) => {
+		const ctx = await context.require_context(args);
+		return ok({ source: ctx.source, build: ctx.build, label: ctx.label, counts: context.file_counts() },
+			context_actions(ctx_args(ctx.source, ctx.build, args['data-dir'])));
+	}
 };
 
 // must run before the first require('./js/...'): those modules read nw/BUILD_RELEASE at load

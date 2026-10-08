@@ -53,4 +53,17 @@ const entry_actions = (data_dir = null) => {
 	];
 };
 
-module.exports = { CLIError, ok, fail, action, to_argv, entry_actions, REGIONS };
+const ctx_args = (source, build, data_dir) => ({ source, build, ...(data_dir ? { 'data-dir': data_dir } : {}) });
+
+const build_actions = (source, builds, data_dir) =>
+	builds.map(b => action('open-build', `Open ${b.label}`, 'open', ctx_args(source, b.index, data_dir)));
+
+// keep in step with context.FILE_TYPE_LISTS (that module needs the CLI shims to load)
+const FILE_TYPES = ['model', 'texture', 'sound', 'text', 'font'];
+
+const context_actions = (ctx) => [
+	...FILE_TYPES.map(type => action('search', `Search ${type} files; set --query to a substring.`, 'search', { ...ctx, type, query: '' })),
+	action('search', 'Search files of every type; set --query to a substring.', 'search', { ...ctx, query: '' })
+];
+
+module.exports = { CLIError, ok, fail, action, to_argv, entry_actions, ctx_args, build_actions, context_actions, FILE_TYPES, REGIONS };
