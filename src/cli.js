@@ -7,13 +7,16 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { parseArgs } = require('util');
-const { CLIError, ok, fail, entry_actions, ctx_args, build_actions, context_actions } = require('./cli/envelope');
+const { CLIError, ok, fail, action, entry_actions, ctx_args, build_actions, context_actions, file_actions } = require('./cli/envelope');
 const context = require('./cli/context');
+const browse = require('./cli/browse');
 const pkg = require('../package.json');
 
 const DEFAULT_DATA_DIR = path.join(os.homedir(), '.wow.export-cli');
 
-const OPTIONS = { 'data-dir': { type: 'string' }, source: { type: 'string' }, build: { type: 'string' } };
+const OPTIONS = { 'data-dir': { type: 'string' }, source: { type: 'string' }, build: { type: 'string' },
+	query: { type: 'string' }, regex: { type: 'boolean' }, type: { type: 'string' }, offset: { type: 'string' }, limit: { type: 'string' }
+};
 
 const COMMANDS = {
 	'': async (args) => ok({
@@ -33,6 +36,24 @@ const COMMANDS = {
 		const ctx = await context.require_context(args);
 		return ok({ source: ctx.source, build: ctx.build, label: ctx.label, counts: context.file_counts() },
 			context_actions(ctx_args(ctx.source, ctx.build, args['data-dir'])));
+	},
+
+	search: async (args) => {
+		// validate before require_context so usage errors don't cost a build load
+		const { query = '', regex = false, type } = args;
+		browse.validate_type(type);
+		browse.make_predicate(query, regex);
+		const { offset, limit, limitCapped } = browse.parse_page_args(args);
+
+		const opened = await context.require_context(args);
+		const ctx = ctx_args(opened.source, opened.build, args['data-dir']);
+		const { entries, total } = browse.search({ query, regex, type, offset, limit });
+		const next = offset + limit < total
+			? [action('next-page', 'Fetch the next page', 'search', { ...ctx, query, regex, type, offset: offset + limit, limit })]
+			: [];
+
+		return ok({ query, regex, type: type ?? null, total, offset, limit, limitCapped,
+			entries: entries.map(e => ({ ...e, actions: file_actions(ctx, e) })) }, [...next, ...context_actions(ctx)]);
 	}
 };
 

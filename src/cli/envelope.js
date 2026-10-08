@@ -66,4 +66,13 @@ const context_actions = (ctx) => [
 	action('search', 'Search files of every type; set --query to a substring.', 'search', { ...ctx, query: '' })
 ];
 
-module.exports = { CLIError, ok, fail, action, to_argv, entry_actions, ctx_args, build_actions, context_actions, FILE_TYPES, REGIONS };
+const file_actions = (ctx, entry) => {
+	const args = { ...ctx, file: String(entry.fileDataID) };
+	const actions = [action('inspect', `Inspect ${entry.fileName ?? args.file}.`, 'inspect', args)];
+	if (entry.type === 'model')
+		actions.push(action('preview', 'Render a preview image of this model.', 'preview', args),
+			action('animations', 'List the animations of this model.', 'animations', args));
+	return actions;
+};
+
+module.exports = { CLIError, ok, fail, action, to_argv, entry_actions, ctx_args, build_actions, context_actions, file_actions, FILE_TYPES, REGIONS };
