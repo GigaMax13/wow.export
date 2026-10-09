@@ -3,11 +3,10 @@
 	Authors: Kruithne <kruithne@gmail.com>
 	License: MIT
  */
-const path = require('path');
 const log = require('./log');
 const constants = require('./constants');
 
-const mmap_native = require(path.join(constants.INSTALL_PATH, 'mmap.node'));
+const mmap_native = require(constants.resolve_mmap_path(constants.INSTALL_PATH));
 
 const virtual_files = new Set();
 

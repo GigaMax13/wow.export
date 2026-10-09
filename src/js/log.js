@@ -99,7 +99,7 @@ const write = (...parameters) => {
  * This is defined as a global as it is requested during
  * an application crash where modules may not be loaded.
  */
-getErrorDump = async () => {
+globalThis.getErrorDump = async () => {
 	try {
 		return await fs.promises.readFile(constants.RUNTIME_LOG, 'utf8');
 	} catch (e) {

@@ -15,6 +15,9 @@
 		"url": "https://github.com/Kruithne/wow.export/issues"
 	},
 	"homepage": "https://github.com/Kruithne/wow.export#readme",
+	"bin": {
+		"wow.export": "src/cli.js"
+	},
 	"engines": {
 		"bun": ">=1.2.0"
 	},

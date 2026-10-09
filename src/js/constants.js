@@ -7,13 +7,20 @@
 // This file defines constants used throughout the application.
 const path = require('path');
 const os = require('os');
+const fs = require('fs');
 
 // on macOS, process.execPath points to the renderer helper binary deep inside
 // the framework, not the app root. use __dirname (app.nw/src/) instead.
-const INSTALL_PATH = process.platform === 'darwin'
+const INSTALL_PATH = (process.platform === 'darwin' || nw.__cli)
 	? nw.__dirname
 	: path.dirname(process.execPath);
 const DATA_PATH = nw.App.dataPath;
+
+// packaged builds ship mmap.node at the install root; the CLI runs from source and uses the local build
+const resolve_mmap_path = (install_path, exists = fs.existsSync) => {
+	const packaged = path.join(install_path, 'mmap.node');
+	return exists(packaged) ? packaged : path.join(install_path, 'node_addons', 'mmap', 'build', 'Release', 'mmap.node');
+};
 
 // on macOS, update manifest paths are relative to the portable root (the
 // directory containing the .app bundle), not app.nw inside it.
@@ -39,6 +46,7 @@ const getBlenderBaseDir = () => {
 };
 
 module.exports = {
+	resolve_mmap_path,
 	INSTALL_PATH, // Path to the application installation.
 	DATA_PATH, // Path to the users data directory.
 	RUNTIME_LOG: path.join(DATA_PATH, 'runtime.log'), // Path to the runtime log.
