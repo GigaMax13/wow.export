@@ -101,3 +101,15 @@ test.skipIf(!NETWORK)('open reports counts and search actions; warm open is fast
 	expect(second.env.ok).toBe(true);
 	expect(second.ms).toBeLessThan(first.ms);
 }, 300000);
+
+test('is_network_error recognises wrapped CDN failures', () => {
+	const { is_network_error } = require('../../src/cli/context');
+	expect(is_network_error(new Error('All download attempts failed.'))).toBe(true);
+	expect(is_network_error(new Error('Unable to retrieve CDN config file ab/cd from any CDN host. Last error: Unable to connect'))).toBe(true);
+	expect(is_network_error(Object.assign(new Error('The operation timed out.'), { name: 'TimeoutError' }))).toBe(true);
+	expect(is_network_error(Object.assign(new Error('aborted'), { name: 'AbortError' }))).toBe(true);
+	expect(is_network_error(Object.assign(new Error('x'), { code: 'ENOTFOUND' }))).toBe(true);
+	expect(is_network_error(Object.assign(new Error('x'), { code: 'ConnectionRefused' }))).toBe(true);
+	expect(is_network_error(new Error('HTTP 404 from remote CASC endpoint: x'))).toBe(false);
+	expect(is_network_error(new TypeError('x is undefined'))).toBe(false);
+});

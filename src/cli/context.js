@@ -29,7 +29,10 @@ const parse_source = (spec) => {
 };
 
 const NETWORK_CODES = new Set(['ENOTFOUND', 'ECONNREFUSED', 'ECONNRESET', 'ETIMEDOUT', 'EAI_AGAIN', 'ConnectionRefused', 'FailedToOpenSocket']);
-const is_network_error = (e) => NETWORK_CODES.has(e?.code) || /fetch|network|socket|getaddrinfo/i.test(e?.message ?? '');
+const NETWORK_NAMES = new Set(['TimeoutError', 'AbortError']);
+// wrapper messages from generics.downloadFile and casc-source-remote getCDNConfig drop the original error
+const is_network_error = (e) => NETWORK_CODES.has(e?.code) || NETWORK_NAMES.has(e?.name) ||
+	/fetch|network|socket|getaddrinfo|timed out|All download attempts failed|Unable to retrieve CDN config/i.test(e?.message ?? '');
 const network_error = (region) => new CLIError('network', `Unable to reach the ${region} CDN region.`);
 
 const region_actions = (data_dir) => REGIONS.map(tag => action('builds', `List builds available on the ${tag} CDN region.`,
@@ -119,4 +122,4 @@ const file_counts = () => {
 };
 
 // open_build is exported per WE-2's interface: session mode calls it directly
-module.exports = { FILE_TYPE_LISTS, parse_source, list_builds, open_build, require_context, file_counts };
+module.exports = { FILE_TYPE_LISTS, parse_source, list_builds, open_build, require_context, file_counts, is_network_error };
