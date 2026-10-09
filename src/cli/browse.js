@@ -121,4 +121,4 @@ async function inspect(value) {
 	return { fileDataID, fileName, type, size: data.byteLength, formats: EXPORT_FORMATS[type] };
 }
 
-module.exports = { EXPORT_FORMATS, file_type_of, inspect, search, parse_page_args, validate_type, make_predicate };
+module.exports = { EXPORT_FORMATS, resolve_file, file_type_of, inspect, search, parse_page_args, validate_type, make_predicate };

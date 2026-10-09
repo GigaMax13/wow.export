@@ -10,6 +10,7 @@ const { parseArgs } = require('util');
 const { CLIError, ok, fail, action, entry_actions, ctx_args, build_actions, context_actions, file_actions, export_actions } = require('./cli/envelope');
 const context = require('./cli/context');
 const browse = require('./cli/browse');
+const models = require('./cli/models');
 const pkg = require('../package.json');
 
 const DEFAULT_DATA_DIR = path.join(os.homedir(), '.wow.export-cli');
@@ -66,6 +67,18 @@ const COMMANDS = {
 		const info = await browse.inspect(args.file[0]);
 		const model = info.type === 'model' ? file_actions(ctx, info).filter(a => a.rel !== 'inspect') : [];
 		return ok(info, [...export_actions(ctx, info, info.formats), ...model]);
+	},
+
+	preview: async (args) => {
+		if (args.file?.length !== 1)
+			throw new CLIError('usage', 'preview takes exactly one --file <fdid|path>');
+
+		const opened = await context.require_context(args);
+		const ctx = ctx_args(opened.source, opened.build, args['data-dir']);
+		const data = await models.preview(args.file[0], ctx);
+		const file = String(data.fileDataID);
+		const anims = data.kind === 'M2' ? [action('animations', 'List animations', 'animations', { ...ctx, file })] : [];
+		return ok(data, [...anims, ...export_actions(ctx, data, browse.EXPORT_FORMATS.model)]);
 	}
 };
 
