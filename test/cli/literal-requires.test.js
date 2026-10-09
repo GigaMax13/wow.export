@@ -11,3 +11,10 @@ test('src/cli requires js modules by literal path only', () => {
 		expect(src).not.toMatch(/require\((?!'[^']+'\))/);
 	}
 });
+
+// the compiled bundle is strict: an undeclared assignment is a ReferenceError
+test('log.js sets getErrorDump on globalThis, not as an implicit global', () => {
+	const src = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'js', 'log.js'), 'utf8');
+	expect(src).not.toMatch(/^getErrorDump\s*=/m);
+	expect(src).toMatch(/^globalThis\.getErrorDump\s*=/m);
+});
