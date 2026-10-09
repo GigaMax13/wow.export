@@ -79,6 +79,16 @@ const COMMANDS = {
 		const file = String(data.fileDataID);
 		const anims = data.kind === 'M2' ? [action('animations', 'List animations', 'animations', { ...ctx, file })] : [];
 		return ok(data, [...anims, ...export_actions(ctx, data, browse.EXPORT_FORMATS.model)]);
+	},
+
+	animations: async (args) => {
+		if (args.file?.length !== 1)
+			throw new CLIError('usage', 'animations takes exactly one --file <fdid|path>');
+
+		const opened = await context.require_context(args);
+		const ctx = ctx_args(opened.source, opened.build, args['data-dir']);
+		const data = await models.list_animations(args.file[0], ctx);
+		return ok(data, export_actions(ctx, { fileDataID: data.fileDataID }, browse.EXPORT_FORMATS.model));
 	}
 };
 

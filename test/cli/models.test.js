@@ -8,7 +8,7 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'wecli-'));
 afterAll(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 require('../../src/cli.js').install_shims(tmp);
-const { preview } = require('../../src/cli/models.js');
+const { preview, describe_animations } = require('../../src/cli/models.js');
 
 test('missing skin yields null skin counts and a warning', async () => {
 	const loader = {
@@ -24,6 +24,24 @@ test('missing skin yields null skin counts and a warning', async () => {
 	expect(data.groupCount).toBeNull();
 	expect(data.warnings.length).toBe(1);
 	expect(data.warnings[0]).toContain('555');
+});
+
+test('describe_animations maps entries with names and durations', () => {
+	expect(describe_animations({ animations: [{ id: 0, variationIndex: 0, duration: 1000, flags: 0 }] }))
+		.toEqual([{ id: '0.0', animationId: 0, index: 0, name: 'Stand', duration: 1000 }]);
+	expect(describe_animations({ animations: [{ id: 65000, variationIndex: 0, duration: 5, flags: 0 }] })[0].name)
+		.toBe('UnknownAnim_65000');
+	expect(describe_animations({ animations: [] })).toEqual([]);
+});
+
+test('describe_animations resolves aliases and survives self-loops', () => {
+	const anims = describe_animations({ animations: [
+		{ id: 0, variationIndex: 0, duration: 1000, flags: 0 },
+		{ id: 0, variationIndex: 1, duration: 0, flags: 0x40, aliasNext: 0 }
+	] });
+	expect(anims[1].index).toBe(0);
+	expect(anims[1].duration).toBe(1000);
+	expect(describe_animations({ animations: [{ id: 4, variationIndex: 0, duration: 1, flags: 0x40, aliasNext: 0 }] })[0].index).toBe(0);
 });
 
 const run_cli = (args) => {
@@ -65,4 +83,21 @@ net('preview a WMO and reject a texture', () => {
 	const bad = run_cli(['preview', ...ctx, '--file', String(tex.fileDataID)]);
 	expect(bad.error.code).toBe('unsupported-type');
 	expect(bad.actions.map(a => a.rel)).toContain('inspect');
+}, 600000);
+
+net('animations lists an M2 and rejects a WMO', () => {
+	const env = run_cli(['animations', ...ctx, '--file', '125024']);
+	expect(env.ok).toBe(true);
+	const anims = env.data.animations;
+	expect(anims.length).toBe(32);
+	const names = anims.map(a => a.name);
+	for (const n of ['Stand', 'Walk', 'Run'])
+		expect(names).toContain(n);
+	for (const a of anims) {
+		expect(a.id).toMatch(/^\d+\.\d+$/);
+		expect(typeof a.duration).toBe('number');
+	}
+
+	const wmo = run_cli(['search', ...ctx, '--type', 'model', '--query', '.wmo', '--limit', '1']).data.entries[0];
+	expect(run_cli(['animations', ...ctx, '--file', String(wmo.fileDataID)]).error.code).toBe('unsupported-type');
 }, 600000);

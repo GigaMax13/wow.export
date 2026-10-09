@@ -65,4 +65,45 @@ async function preview(value, ctx = {}, model = null) {
 	return { fileDataID, fileName, kind, ...EMPTY, ...await DESCRIBE[kind](loader) };
 }
 
-module.exports = { load_model, preview };
+// follows aliasNext while flagged 0x40; the visited set stops self-loops and cycles
+const resolve_alias = (anims, i) => {
+	const seen = new Set();
+	while ((anims[i].flags & 0x40) === 0x40 && !seen.has(i) && anims[anims[i].aliasNext]) {
+		seen.add(i);
+		i = anims[i].aliasNext;
+	}
+	return i;
+};
+
+const describe_animations = (source) => {
+	const get_name = js('3D/AnimMapper').get_anim_name;
+	return js('ui/model-viewer-utils').extract_animations({ m2: source }).filter(a => a.id !== 'none').map(a => {
+		const index = resolve_alias(source.animations, a.m2Index);
+		return { id: a.id, animationId: a.animationId, index, name: get_name(a.animationId), duration: source.animations[index].duration };
+	});
+};
+
+// mirrors M2RendererGL: animations come from the skeleton (its parent when set); a missing .skel falls back to the M2
+async function animation_source(m2) {
+	if (!m2.skeletonFileID)
+		return m2;
+	const casc = js('core').view.casc;
+	const SKELLoader = js('3D/loaders/SKELLoader');
+	const load = async (id) => { const s = new SKELLoader(await casc.getFile(id)); await s.load(); return s; };
+	try {
+		const skel = await load(m2.skeletonFileID);
+		return skel.parent_skel_file_id > 0 ? await load(skel.parent_skel_file_id) : skel;
+	} catch {
+		return m2;
+	}
+}
+
+async function list_animations(value, ctx = {}) {
+	const { fileDataID, fileName, kind, loader } = await load_model(value, ctx);
+	if (kind !== 'M2')
+		throw new CLIError('unsupported-type', `${fileName} is ${kind}, animations are listed for M2 models only`,
+			[action('preview', `Preview ${fileName}.`, 'preview', { ...ctx, file: String(fileDataID) })]);
+	return { fileDataID, fileName, animations: describe_animations(await animation_source(loader)) };
+}
+
+module.exports = { load_model, preview, list_animations, describe_animations };
