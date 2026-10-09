@@ -11,13 +11,14 @@ const { CLIError, ok, fail, action, entry_actions, ctx_args, build_actions, cont
 const context = require('./cli/context');
 const browse = require('./cli/browse');
 const models = require('./cli/models');
+const { export_files } = require('./cli/export');
 const pkg = require('../package.json');
 
 const DEFAULT_DATA_DIR = path.join(os.homedir(), '.wow.export-cli');
 
 const OPTIONS = { 'data-dir': { type: 'string' }, source: { type: 'string' }, build: { type: 'string' },
 	query: { type: 'string' }, regex: { type: 'boolean' }, type: { type: 'string' }, offset: { type: 'string' }, limit: { type: 'string' },
-	file: { type: 'string', multiple: true }
+	file: { type: 'string', multiple: true }, format: { type: 'string' }, out: { type: 'string' }
 };
 
 const COMMANDS = {
@@ -89,6 +90,17 @@ const COMMANDS = {
 		const ctx = ctx_args(opened.source, opened.build, args['data-dir']);
 		const data = await models.list_animations(args.file[0], ctx);
 		return ok(data, export_actions(ctx, { fileDataID: data.fileDataID }, browse.EXPORT_FORMATS.model));
+	},
+
+	export: async (args) => {
+		if (!args.file?.length || !args.format || !args.out)
+			throw new CLIError('usage', 'export takes --file <fdid|path> (repeatable), --format <F> and --out <dir>');
+
+		const opened = await context.require_context(args);
+		const ctx = ctx_args(opened.source, opened.build, args['data-dir']);
+		const data = await export_files({ files: args.file, format: args.format, out: args.out, ctx });
+		const failed = data.results.filter(r => !r.ok).length;
+		return failed ? fail('export-failed', `${failed} of ${data.results.length} files failed`, [], data) : ok(data, []);
 	}
 };
 
