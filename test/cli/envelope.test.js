@@ -60,6 +60,18 @@ test('to_argv', () => {
 		.toEqual(['search', '--a', 'x', '--b', '--d', '1', '--d', '2']);
 });
 
+test('to_argv drops the script path when compiled', () => {
+	const envelope = require('../../src/cli/envelope');
+	expect(envelope.IS_COMPILED).toBe(false);
+	expect(to_argv('builds')[1]).toEndWith('cli.js');
+	envelope.IS_COMPILED = true;
+	try {
+		expect(to_argv('builds', { source: 'remote:us' })).toEqual([process.execPath, 'builds', '--source', 'remote:us']);
+	} finally {
+		envelope.IS_COMPILED = false;
+	}
+});
+
 test('ok/fail shapes', () => {
 	expect(fail('io', 'm')).toMatchObject({ ok: false, error: { code: 'io', message: 'm' } });
 	expect('error' in ok({})).toBe(false);

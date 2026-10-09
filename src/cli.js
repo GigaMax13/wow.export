@@ -7,7 +7,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { parseArgs } = require('util');
-const { CLIError, ok, fail, action, entry_actions, ctx_args, build_actions, context_actions, file_actions, export_actions } = require('./cli/envelope');
+const { IS_COMPILED, CLIError, ok, fail, action, entry_actions, ctx_args, build_actions, context_actions, file_actions, export_actions } = require('./cli/envelope');
 const context = require('./cli/context');
 const browse = require('./cli/browse');
 const models = require('./cli/models');
@@ -115,7 +115,7 @@ const install_shims = (data_dir) => {
 	Object.assign(console, { log: console.error }); // only the envelope may reach stdout
 	fs.mkdirSync(data_dir, { recursive: true });
 	globalThis.nw = {
-		__dirname: path.join(__dirname, '..'),
+		__dirname: IS_COMPILED ? path.dirname(process.execPath) : path.join(__dirname, '..'),
 		__cli: true,
 		App: { dataPath: data_dir, argv: [], manifest: { version: pkg.version, flavour: 'cli', guid: 'cli' } },
 		Shell: { openItem() {}, openExternal() {} }
