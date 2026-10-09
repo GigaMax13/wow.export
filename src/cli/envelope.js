@@ -7,8 +7,9 @@ const os = require('os');
 const path = require('path');
 
 const CLI_PATH = path.join(__dirname, '..', 'cli.js');
-// bun --compile embeds modules under a virtual root; there process.execPath is the CLI itself
-const IS_COMPILED = /^(\/\$bunfs|[A-Z]:\\~BUN)/.test(__dirname);
+// bun --compile runs the entry from a virtual root (but bakes __dirname to the source dir); there process.execPath is the CLI itself
+const is_bunfs = p => /^(\/\$bunfs|[A-Z]:\\~BUN)/.test(p ?? '');
+const IS_COMPILED = is_bunfs(globalThis.Bun?.main ?? process.argv[1]);
 
 // mirrors constants.PATCH.REGIONS tags; constants.js cannot be required before the shims
 const REGIONS = ['eu', 'us', 'kr', 'tw', 'cn'];
@@ -83,4 +84,4 @@ const file_actions = (ctx, entry) => {
 const export_actions = (ctx, file, formats) => formats.map(format => action('export', `Export as ${format}.`, 'export',
 	{ ...ctx, file: String(file.fileDataID), format, out: path.join(os.homedir(), 'wow.export') }));
 
-module.exports = { IS_COMPILED, export_actions, CLIError, ok, fail, action, to_argv, entry_actions, ctx_args, build_actions, context_actions, file_actions, FILE_TYPES, REGIONS };
+module.exports = { IS_COMPILED, is_bunfs, export_actions, CLIError, ok, fail, action, to_argv, entry_actions, ctx_args, build_actions, context_actions, file_actions, FILE_TYPES, REGIONS };

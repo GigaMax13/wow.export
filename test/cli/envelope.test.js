@@ -72,6 +72,14 @@ test('to_argv drops the script path when compiled', () => {
 	}
 });
 
+test('is_bunfs matches the compiled root, not the baked source dir', () => {
+	const { is_bunfs } = require('../../src/cli/envelope');
+	expect(is_bunfs('/$bunfs/root/cli')).toBe(true);
+	expect(is_bunfs('B:\\~BUN\\root\\cli.exe')).toBe(true);
+	expect(is_bunfs(__dirname)).toBe(false);
+	expect(is_bunfs(undefined)).toBe(false);
+});
+
 test('ok/fail shapes', () => {
 	expect(fail('io', 'm')).toMatchObject({ ok: false, error: { code: 'io', message: 'm' } });
 	expect('error' in ok({})).toBe(false);
