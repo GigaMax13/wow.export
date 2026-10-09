@@ -120,6 +120,15 @@ const install_shims = (data_dir) => {
 		App: { dataPath: data_dir, argv: [], manifest: { version: pkg.version, flavour: 'cli', guid: 'cli' } },
 		Shell: { openItem() {}, openExternal() {} }
 	};
+	if (IS_COMPILED)
+		embed_webp_wasm();
+};
+
+// webp-wasm reads its encoder from a __dirname baked at compile time; serve the copy embedded in the binary
+const embed_webp_wasm = () => {
+	const wasm = require('webp-wasm/webp_node_enc.wasm');
+	const read_file = fs.readFile;
+	fs.readFile = (file, ...rest) => read_file(path.basename(String(file)) === 'webp_node_enc.wasm' ? wasm : file, ...rest);
 };
 
 const install_core = () => {
@@ -240,4 +249,4 @@ const main = async () => {
 if (require.main === module)
 	main();
 
-module.exports = { install_shims, run, validate_request, COMMANDS, OPTIONS };
+module.exports = { install_shims, embed_webp_wasm, run, validate_request, COMMANDS, OPTIONS };
