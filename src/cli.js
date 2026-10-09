@@ -92,6 +92,11 @@ const COMMANDS = {
 		return ok(data, export_actions(ctx, { fileDataID: data.fileDataID }, browse.EXPORT_FORMATS.model));
 	},
 
+	// handled in main(): a long-lived line loop, one envelope per stdin line
+	session: async () => {
+		throw new CLIError('usage', 'session is started as its own process: wow.export session');
+	},
+
 	export: async (args) => {
 		if (!args.file?.length || !args.format || !args.out)
 			throw new CLIError('usage', 'export takes --file <fdid|path> (repeatable), --format <F> and --out <dir>');
@@ -148,6 +153,59 @@ const run = async (name, args) => {
 	}
 };
 
+// { command, args } -> { name, args } normalised as parseArgs would produce them
+const validate_request = (request) => {
+	if (request === null || typeof request !== 'object' || Array.isArray(request))
+		throw new CLIError('usage', 'Request must be a JSON object');
+
+	const command = request.command ?? ''; // the entry action's request carries command: null
+	const args = request.args ?? {};
+	if (typeof command !== 'string' || command === 'session' || !Object.hasOwn(COMMANDS, command))
+		throw new CLIError('usage', `Unknown command: ${command}`);
+	if (args === null || typeof args !== 'object' || Array.isArray(args))
+		throw new CLIError('usage', 'args must be an object');
+
+	const out = {};
+	for (const [key, value] of Object.entries(args)) {
+		const opt = Object.hasOwn(OPTIONS, key) ? OPTIONS[key] : null;
+		if (!opt)
+			throw new CLIError('usage', `Unknown option: ${key}`);
+		if (value === null)
+			continue; // to_argv omits nulls too
+
+		const scalar = (v) => {
+			if (opt.type === 'boolean') {
+				if (typeof v !== 'boolean')
+					throw new CLIError('usage', `Option ${key} must be a boolean`);
+				return v;
+			}
+			if (typeof v !== 'string' && typeof v !== 'number')
+				throw new CLIError('usage', `Option ${key} must be a string`);
+			return String(v);
+		};
+		out[key] = opt.multiple ? (Array.isArray(value) ? value : [value]).map(scalar) : scalar(value);
+	}
+	return { name: command, args: out };
+};
+
+const run_session = async (session_args) => {
+	const rl = require('readline').createInterface({ input: process.stdin, crlfDelay: Infinity });
+	for await (const line of rl) {
+		if (!line.trim())
+			continue;
+
+		let envelope;
+		try {
+			const { name, args } = validate_request(JSON.parse(line));
+			const data_dir = session_args['data-dir'];
+			envelope = await run(name, { ...(data_dir ? { 'data-dir': data_dir } : {}), ...args });
+		} catch (e) {
+			envelope = fail('usage', e.message, entry_actions(session_args['data-dir']));
+		}
+		process.stdout.write(JSON.stringify(envelope) + '\n');
+	}
+};
+
 let printed = false;
 const emit = (envelope) => {
 	if (printed)
@@ -172,10 +230,14 @@ const main = async () => {
 	install_shims(values['data-dir'] ?? DEFAULT_DATA_DIR);
 	install_core();
 	await require('./js/config').load();
+	if (positionals[0] === 'session') {
+		await run_session(values);
+		process.exit(0);
+	}
 	emit(await run(positionals[0] ?? '', values));
 };
 
 if (require.main === module)
 	main();
 
-module.exports = { install_shims, run, COMMANDS, OPTIONS };
+module.exports = { install_shims, run, validate_request, COMMANDS, OPTIONS };
