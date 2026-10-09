@@ -17,6 +17,7 @@
 			"height": 988
 		}
 	},
+	"cliScript": "./src/cli.js",
 	"updaterScript": "./updater/updater.js",
 	"installerScript": "./installer/installer.js",
 	"nativeAddonScript": "./build/build-native-addons.js",
@@ -54,6 +55,10 @@
 			"bundleConfig": {
 				"filterExt": [".js"],
 				"jsEntry": "app.js"
+			},
+			"cli": {
+				"target": "bun-windows-x64",
+				"out": "wow.export-cli.exe"
 			},
 			"updater": {
 				"target": "bun-windows-x64",
@@ -128,6 +133,10 @@
 				"filterExt": [".js"],
 				"jsEntry": "app.js"
 			},
+			"cli": {
+				"target": "bun-linux-x64",
+				"out": "wow.export-cli"
+			},
 			"updater": {
 				"target": "bun-linux-x64",
 				"out": "updater"
@@ -188,6 +197,10 @@
 				"filterExt": [".js"],
 				"jsEntry": "app.js"
 			},
+			"cli": {
+				"target": "bun-darwin-x64",
+				"out": "wow.export.app/Contents/Resources/app.nw/wow.export-cli"
+			},
 			"updater": {
 				"target": "bun-darwin-x64",
 				"out": "updater"
@@ -236,6 +249,10 @@
 			"bundleConfig": {
 				"filterExt": [".js"],
 				"jsEntry": "app.js"
+			},
+			"cli": {
+				"target": "bun-darwin-arm64",
+				"out": "wow.export.app/Contents/Resources/app.nw/wow.export-cli"
 			},
 			"updater": {
 				"target": "bun-darwin-arm64",

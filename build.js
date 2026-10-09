@@ -580,6 +580,25 @@ const deflateBuffer = util.promisify(zlib.deflate);
 			}
 		}
 
+		// Compile headless CLI into the build (before the update bundle collects files).
+		if (build.cli) {
+			const cliOutput = path.join(buildDir, build.cli.out);
+			log.info('Compiling CLI (*%s*)...', build.cli.target);
+
+			const result = Bun.spawnSync({ cmd: ['bun', 'build', config.cliScript, '--compile', '--target=' + build.cli.target, '--outfile', cliOutput], stdio: ['inherit', 'inherit', 'inherit'] });
+			if (result.exitCode !== 0)
+				throw new Error(`Bun CLI build failed with code ${result.exitCode}`);
+
+			log.success('CLI compiled -> *%s*', cliOutput);
+
+			// ad-hoc codesign bun-compiled binaries for macOS
+			if (build.cli.target.includes('darwin') && process.platform === 'darwin') {
+				const sign_result = Bun.spawnSync({ cmd: ['codesign', '--force', '-s', '-', cliOutput], stdio: ['inherit', 'inherit', 'inherit'] });
+				if (sign_result.exitCode !== 0)
+					throw new Error('Codesigning CLI binary failed');
+			}
+		}
+
 		// Build a manifest (package.json) file for the build.
 		const manifest = {};
 
