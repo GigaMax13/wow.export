@@ -75,6 +75,9 @@ test('file_actions: inspect always, preview + animations for models', () => {
 	const acts = file_actions(ctx, { fileDataID: 5, type: 'model' });
 	expect(acts.map(a => a.rel)).toEqual(['inspect', 'preview', 'animations']);
 	expect(acts[0].request.args).toEqual({ ...ctx, file: '5' });
+	const p = acts.find(a => a.rel === 'preview');
+	expect(p.description).not.toMatch(/render|image/i);
+	expect(p.description).toMatch(/metadata/i);
 });
 
 const run_cli = (args) => {

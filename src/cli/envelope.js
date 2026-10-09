@@ -71,12 +71,13 @@ const file_actions = (ctx, entry) => {
 	const args = { ...ctx, file: String(entry.fileDataID) };
 	const actions = [action('inspect', `Inspect ${entry.fileName ?? args.file}.`, 'inspect', args)];
 	if (entry.type === 'model')
-		actions.push(action('preview', 'Render a preview image of this model.', 'preview', args),
+		actions.push(
+			action('preview', 'Show model metadata (geometry counts, bounds, textures, animations).', 'preview', args),
 			action('animations', 'List the animations of this model.', 'animations', args));
 	return actions;
 };
 
-// --out falls back to the desktop default export dir (src/app.js) until the export command lands
+// suggested --out is ~/wow.export, mirroring the desktop default export dir (src/app.js)
 const export_actions = (ctx, file, formats) => formats.map(format => action('export', `Export as ${format}.`, 'export',
 	{ ...ctx, file: String(file.fileDataID), format, out: path.join(os.homedir(), 'wow.export') }));
 
