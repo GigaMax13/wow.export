@@ -78,16 +78,16 @@ async function open_build(source_spec, build_index, data_dir = null) {
 	const src = parse_source(source_spec);
 	const core = js('core');
 
+	const casc = await init_source(src, data_dir);
+	const product = casc.getProductList().find(p => p.buildIndex === build_index);
+	if (!product)
+		throw new CLIError('build-not-found', `No build with index ${build_index} in ${source_spec}`);
+
 	if (active) {
 		active.casc.cleanup();
 		js('mmap').release_virtual_files();
 		active = null;
 	}
-
-	const casc = await init_source(src, data_dir);
-	const product = casc.getProductList().find(p => p.buildIndex === build_index);
-	if (!product)
-		throw new CLIError('build-not-found', `No build with index ${build_index} in ${source_spec}`);
 
 	await js('casc/listfile').preload();
 	await js('casc/dbd-manifest').preload();

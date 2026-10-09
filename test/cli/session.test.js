@@ -91,13 +91,19 @@ test.skipIf(process.env.WOW_EXPORT_CLI_NETWORK !== '1')('an opened build is reus
 	expect((await ask({ command: 'open', args: ctx })).env.ok).toBe(true);
 	const loaded = err.length;
 	expect((await ask({ command: 'inspect', args: { ...ctx, file: '999999999' } })).env.ok).toBe(false);
-	for (const req of [{ command: 'search', args: { ...ctx, type: 'model', query: 'murloc' } },
-		{ command: 'animations', args: { ...ctx, file: '125024' } }]) {
+	expect((await ask({ command: 'open', args: { source: 'remote:us', build: 9999 } })).env.error.code).toBe('build-not-found');
+	const reused = async (req) => {
 		const { env, ms } = await ask(req);
 		expect(env.ok).toBe(true);
 		expect(ms).toBeLessThan(5000);
-	}
-	expect(err.length).toBe(loaded);
+	};
+	const search = { command: 'search', args: { ...ctx, type: 'model', query: 'murloc' } };
+	await reused(search);
+	expect((await ask({ command: 'open', args: { source: 'local:/does/not/exist', build: 0 } })).env.error.code).toBe('source-not-found');
+	await reused(search);
+	await reused({ command: 'animations', args: { ...ctx, file: '125024' } });
+	// CASCRemote.init for build 9999 may log, so reuse is asserted by timing, not stderr length.
+	expect(err.length).toBeGreaterThanOrEqual(loaded);
 	proc.stdin.end();
 	expect(await proc.exited).toBe(0);
 }, 300000);
