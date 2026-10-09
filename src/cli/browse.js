@@ -3,12 +3,10 @@
 	Authors: Kruithne <kruithne@gmail.com>
 	License: MIT
  */
-const path = require('path');
 const { CLIError, FILE_TYPES } = require('./envelope');
 const { FILE_TYPE_LISTS } = require('./context');
 
-// required lazily: the js modules need the CLI shims installed first
-const js = (name) => require(path.join('..', 'js', name));
+// js modules are required lazily (inside functions): the CLI shims must be installed first
 
 const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 1000;
@@ -53,8 +51,8 @@ const make_predicate = (query, regex) => {
 const search = ({ query = '', regex = false, type, offset, limit }) => {
 	validate_type(type);
 	const match = make_predicate(query, regex);
-	const view = js('core').view;
-	const { parseFileEntry } = js('casc/listfile');
+	const view = require('../js/core').view;
+	const { parseFileEntry } = require('../js/casc/listfile');
 
 	const entries = [];
 	let total = 0;
@@ -84,7 +82,7 @@ const EXPORT_FORMATS = {
 const not_found = (value) => new CLIError('file-not-found', `No file ${value} in this build`);
 
 const resolve_file = (value) => {
-	const listfile = js('casc/listfile');
+	const listfile = require('../js/casc/listfile');
 	let fileDataID = listfile.getByFilename(value);
 	if (fileDataID === undefined) {
 		if (!/^\d+$/.test(value))
@@ -96,17 +94,17 @@ const resolve_file = (value) => {
 
 // desktop categorisation: the list whose entry ends in " [fdid]"
 const file_type_of = (fdid) => {
-	const view = js('core').view;
+	const view = require('../js/core').view;
 	const suffix = ` [${fdid}]`;
 	return FILE_TYPES.find(t => (view[FILE_TYPE_LISTS[t]] ?? []).some(e => e.endsWith(suffix))) ?? 'other';
 };
 
 async function inspect(value) {
 	const { fileDataID, fileName } = resolve_file(value);
-	const { EncryptionError } = js('casc/blte-reader');
+	const { EncryptionError } = require('../js/casc/blte-reader');
 	let data;
 	try {
-		data = await js('core').view.casc.getFile(fileDataID);
+		data = await require('../js/core').view.casc.getFile(fileDataID);
 		if (typeof data.processAllBlocks === 'function')
 			data.processAllBlocks();
 	} catch (e) {

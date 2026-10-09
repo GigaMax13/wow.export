@@ -8,8 +8,7 @@ const path = require('path');
 const { CLIError, export_actions } = require('./envelope');
 const { EXPORT_FORMATS, resolve_file, file_type_of } = require('./browse');
 
-// required lazily: the js modules need the CLI shims installed first
-const js = (name) => require(path.join('..', 'js', name));
+// js modules are required lazily (inside functions): the CLI shims must be installed first
 
 const TEXTURE_EXT = { PNG: '.png', WEBP: '.webp', RAW: '.blp' };
 
@@ -17,7 +16,7 @@ const TEXTURE_EXT = { PNG: '.png', WEBP: '.webp', RAW: '.blp' };
 const resolve = (value) => {
 	try {
 		const { fileDataID, fileName } = resolve_file(value);
-		if (!js('core').view.casc.fileExists(fileDataID))
+		if (!require('../js/core').view.casc.fileExists(fileDataID))
 			throw new Error('missing');
 		return { fileDataID, fileName, type: file_type_of(fileDataID) };
 	} catch {
@@ -27,15 +26,15 @@ const resolve = (value) => {
 
 // mirrors texture-exporter.js:exportFiles and tab_audio.js:export_sounds
 async function write_file(file, format, data) {
-	const core = js('core');
-	const ExportHelper = js('casc/export-helper');
+	const core = require('../js/core');
+	const ExportHelper = require('../js/casc/export-helper');
 	const config = core.view.config;
 	let target = ExportHelper.getExportPath(file.fileName);
 
 	if (file.type === 'texture') {
 		target = ExportHelper.replaceExtension(target, TEXTURE_EXT[format]);
 	} else if (file.fileName.endsWith('.unk_sound')) {
-		const { detectFileType, AUDIO_TYPE_OGG, AUDIO_TYPE_MP3 } = js('ui/audio-helper');
+		const { detectFileType, AUDIO_TYPE_OGG, AUDIO_TYPE_MP3 } = require('../js/ui/audio-helper');
 		const kind = detectFileType(data);
 		if (kind === AUDIO_TYPE_OGG)
 			target = ExportHelper.replaceExtension(target, '.ogg');
@@ -43,11 +42,11 @@ async function write_file(file, format, data) {
 			target = ExportHelper.replaceExtension(target, '.mp3');
 	}
 
-	if (!config.overwriteFiles && await js('generics').fileExists(target))
+	if (!config.overwriteFiles && await require('../js/generics').fileExists(target))
 		return;
 
 	if (file.type === 'texture' && format !== 'RAW') {
-		const blp = new (js('casc/blp'))(data);
+		const blp = new (require('../js/casc/blp'))(data);
 		if (format === 'PNG')
 			await blp.saveToPNG(target, config.exportChannelMask);
 		else
@@ -105,8 +104,8 @@ async function export_files({ files, format, out, ctx }) {
 		throw new CLIError('io', e.message);
 	}
 
-	const core = js('core');
-	const ExportHelper = js('casc/export-helper');
+	const core = require('../js/core');
+	const ExportHelper = require('../js/casc/export-helper');
 	core.view.config.exportDirectory = out;
 
 	const helper = new ExportHelper(resolved.length, 'file');
@@ -122,7 +121,7 @@ async function export_files({ files, format, out, ctx }) {
 
 			const data = await core.view.casc.getFile(file.fileDataID);
 			if (file.type === 'model') {
-				const { export_model } = js('ui/model-viewer-utils');
+				const { export_model } = require('../js/ui/model-viewer-utils');
 				await export_model({ core, data, file_data_id: file.fileDataID, file_name: file.fileName, format,
 					export_path: ExportHelper.getExportPath(file.fileName), helper, file_manifest: [] });
 			} else {

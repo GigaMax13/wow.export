@@ -3,15 +3,13 @@
 	Authors: Kruithne <kruithne@gmail.com>
 	License: MIT
  */
-const path = require('path');
 const { CLIError, action, REGIONS } = require('./envelope');
 
-// required lazily: the js modules need the CLI shims installed first
-const js = (name) => require(path.join('..', 'js', name));
+// js modules are required lazily (inside functions): the CLI shims must be installed first
 
 const FILE_TYPE_LISTS = { model: 'listfileModels', texture: 'listfileTextures', sound: 'listfileSounds', text: 'listfileText', font: 'listfileFonts' };
 
-const region_tags = () => js('constants').PATCH.REGIONS.map(r => r.tag);
+const region_tags = () => require('../js/constants').PATCH.REGIONS.map(r => r.tag);
 
 const parse_source = (spec) => {
 	const tags = region_tags();
@@ -39,11 +37,11 @@ const region_actions = (data_dir) => REGIONS.map(tag => action('builds', `List b
 	'builds', { source: 'remote:' + tag, ...(data_dir ? { 'data-dir': data_dir } : {}) }));
 
 const init_source = async (src, data_dir) => {
-	const core = js('core');
-	core.view.selectedCDNRegion = { tag: src.region ?? js('constants').PATCH.DEFAULT_REGION };
+	const core = require('../js/core');
+	core.view.selectedCDNRegion = { tag: src.region ?? require('../js/constants').PATCH.DEFAULT_REGION };
 
 	if (src.kind === 'local') {
-		const CASCLocal = js('casc/casc-source-local');
+		const CASCLocal = require('../js/casc/casc-source-local');
 		const casc = new CASCLocal(src.dir);
 		try {
 			await casc.init();
@@ -55,7 +53,7 @@ const init_source = async (src, data_dir) => {
 		return casc;
 	}
 
-	const CASCRemote = js('casc/casc-source-remote');
+	const CASCRemote = require('../js/casc/casc-source-remote');
 	const casc = new CASCRemote(src.region);
 	await casc.init();
 	if (casc.getProductList().length === 0)
@@ -76,7 +74,7 @@ async function open_build(source_spec, build_index, data_dir = null) {
 		return active;
 
 	const src = parse_source(source_spec);
-	const core = js('core');
+	const core = require('../js/core');
 
 	const casc = await init_source(src, data_dir);
 	const product = casc.getProductList().find(p => p.buildIndex === build_index);
@@ -85,14 +83,14 @@ async function open_build(source_spec, build_index, data_dir = null) {
 
 	if (active) {
 		active.casc.cleanup();
-		js('mmap').release_virtual_files();
+		require('../js/mmap').release_virtual_files();
 		active = null;
 	}
 
-	await js('casc/listfile').preload();
-	await js('casc/dbd-manifest').preload();
+	await require('../js/casc/listfile').preload();
+	await require('../js/casc/dbd-manifest').preload();
 	if (!keys_loaded) {
-		await js('casc/tact-keys').load();
+		await require('../js/casc/tact-keys').load();
 		keys_loaded = true;
 	}
 
@@ -117,7 +115,7 @@ async function require_context(args) {
 }
 
 const file_counts = () => {
-	const view = js('core').view;
+	const view = require('../js/core').view;
 	return Object.fromEntries(Object.entries(FILE_TYPE_LISTS).map(([type, key]) => [type, view[key]?.length ?? 0]));
 };
 

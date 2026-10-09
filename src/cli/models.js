@@ -3,14 +3,12 @@
 	Authors: Kruithne <kruithne@gmail.com>
 	License: MIT
  */
-const path = require('path');
 const { CLIError, action } = require('./envelope');
 const { resolve_file, file_type_of } = require('./browse');
 
-// required lazily: the js modules need the CLI shims installed first
-const js = (name) => require(path.join('..', 'js', name));
+// js modules are required lazily (inside functions): the CLI shims must be installed first
 
-const named = (fdid) => ({ fileDataID: fdid, fileName: js('casc/listfile').getByIDOrUnknown(fdid) });
+const named = (fdid) => ({ fileDataID: fdid, fileName: require('../js/casc/listfile').getByIDOrUnknown(fdid) });
 
 async function load_model(value, ctx = {}) {
 	const { fileDataID, fileName } = resolve_file(value);
@@ -18,12 +16,12 @@ async function load_model(value, ctx = {}) {
 		throw new CLIError('unsupported-type', `${fileName} is not a model`,
 			[action('inspect', `Inspect ${fileName}.`, 'inspect', { ...ctx, file: String(fileDataID) })]);
 
-	const mvu = js('ui/model-viewer-utils');
-	const data = await js('core').view.casc.getFile(fileDataID);
+	const mvu = require('../js/ui/model-viewer-utils');
+	const data = await require('../js/core').view.casc.getFile(fileDataID);
 	const type = mvu.detect_model_type_by_name(fileName) ?? mvu.detect_model_type(data);
-	const [kind, loader] = type === mvu.MODEL_TYPE_M2 ? ['M2', new (js('3D/loaders/M2Loader'))(data)]
-		: type === mvu.MODEL_TYPE_WMO ? ['WMO', new (js('3D/loaders/WMOLoader'))(data, fileDataID)]
-			: ['M3', new (js('3D/loaders/M3Loader'))(data)];
+	const [kind, loader] = type === mvu.MODEL_TYPE_M2 ? ['M2', new (require('../js/3D/loaders/M2Loader'))(data)]
+		: type === mvu.MODEL_TYPE_WMO ? ['WMO', new (require('../js/3D/loaders/WMOLoader'))(data, fileDataID)]
+			: ['M3', new (require('../js/3D/loaders/M3Loader'))(data)];
 	await loader.load();
 	return { fileDataID, fileName, kind, loader };
 }
@@ -47,7 +45,7 @@ async function describe_m2(m) {
 
 const describe_wmo = (w) => {
 	// classic WMOs store offsets into textureNames, not FDIDs (as in WMOExporter)
-	const listfile = js('casc/listfile');
+	const listfile = require('../js/casc/listfile');
 	const to_fdid = (t) => w.textureNames ? listfile.getByFilename(w.textureNames[t] ?? '') ?? 0 : t;
 	const ids = new Set(w.materials.flatMap(m => [m.texture1, m.texture2, m.texture3].map(to_fdid)).filter(id => id > 0));
 	return { groupCount: w.groupCount, doodadSets: w.doodadSets.map(s => s.name),
@@ -76,8 +74,8 @@ const resolve_alias = (anims, i) => {
 };
 
 const describe_animations = (source) => {
-	const get_name = js('3D/AnimMapper').get_anim_name;
-	return js('ui/model-viewer-utils').extract_animations({ m2: source }).filter(a => a.id !== 'none').map(a => {
+	const get_name = require('../js/3D/AnimMapper').get_anim_name;
+	return require('../js/ui/model-viewer-utils').extract_animations({ m2: source }).filter(a => a.id !== 'none').map(a => {
 		const index = resolve_alias(source.animations, a.m2Index);
 		return { id: a.id, animationId: a.animationId, index, name: get_name(a.animationId), duration: source.animations[index].duration };
 	});
@@ -87,8 +85,8 @@ const describe_animations = (source) => {
 async function animation_source(m2) {
 	if (!m2.skeletonFileID)
 		return m2;
-	const casc = js('core').view.casc;
-	const SKELLoader = js('3D/loaders/SKELLoader');
+	const casc = require('../js/core').view.casc;
+	const SKELLoader = require('../js/3D/loaders/SKELLoader');
 	const load = async (id) => { const s = new SKELLoader(await casc.getFile(id)); await s.load(); return s; };
 	try {
 		const skel = await load(m2.skeletonFileID);
