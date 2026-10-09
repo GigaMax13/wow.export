@@ -13,10 +13,12 @@ const js = (name) => require(path.join('..', 'js', name));
 
 const TEXTURE_EXT = { PNG: '.png', WEBP: '.webp', RAW: '.blp' };
 
-// unresolvable values become type 'other' so getFile fails inside the per-file try
+// unresolvable or missing values get fileDataID null: skipped by format validation, failed per file
 const resolve = (value) => {
 	try {
 		const { fileDataID, fileName } = resolve_file(value);
+		if (!js('core').view.casc.fileExists(fileDataID))
+			throw new Error('missing');
 		return { fileDataID, fileName, type: file_type_of(fileDataID) };
 	} catch {
 		return { fileDataID: null, fileName: value, type: 'other' };
@@ -87,6 +89,8 @@ async function export_files({ files, format, out, ctx }) {
 	format = format.toUpperCase();
 	const resolved = files.map(resolve);
 	for (const file of resolved) {
+		if (file.fileDataID === null)
+			continue;
 		const valid = EXPORT_FORMATS[file.type];
 		if (!valid.includes(format))
 			throw new CLIError('unsupported-format', `${format} is not valid for ${file.type} ${file.fileName}; valid: ${valid.join(', ')}`,

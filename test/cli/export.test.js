@@ -35,7 +35,7 @@ const { getByFilename, getByID } = listfile;
 afterAll(() => Object.assign(listfile, { getByFilename, getByID }));
 listfile.getByFilename = () => undefined;
 listfile.getByID = (id) => id === 125024 ? 'creature/murloc/murloc.m2' : `misc/${id}.txt`;
-core.view.casc = { getFile: async (id) => {
+core.view.casc = { fileExists: (id) => id !== 999999999, getFile: async (id) => {
 	if (id === 999999999)
 		throw new Error('File 999999999 does not exist in root');
 	return BufferWrapper.from(Buffer.from('raw-' + id));
@@ -62,6 +62,13 @@ test('one failing file does not stop the others', async () => {
 	expect(fs.readFileSync(results[0].paths[0], 'utf8')).toBe('raw-5');
 	expect(results[1].ok).toBe(false);
 	expect(results[1].error).toContain('999999999');
+});
+
+test('missing file fails per file under a non-RAW format', async () => {
+	const { results } = await export_files({ files: ['999999999'], format: 'PNG', out: fresh(), ctx });
+	expect(results[0].ok).toBe(false);
+	expect(results[0].error).toContain('999999999');
+	expect(results[0].paths).toEqual([]);
 });
 
 test('overwriteFiles false skips an existing target', async () => {
